@@ -298,6 +298,7 @@ final class StateController<Layout: ChatLayoutRepresentation> {
         attributes.visibleBoundsSize = additionalAttributes.visibleBounds.size
         attributes.layoutFrame = additionalAttributes.layoutFrame
         attributes.additionalInsets = additionalAttributes.additionalInsets
+        attributes.transform = CGAffineTransform(rotationAngle: .pi)
         return attributes
     }
 

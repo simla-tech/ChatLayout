@@ -157,6 +157,10 @@ public final class CollectionViewChatLayout: UICollectionViewLayout {
         }
         return collectionView.frame.size
     }
+    
+    public var contentHeight: CGFloat {
+        controller.contentHeight(at: state)
+    }
 
     // MARK: Private Properties
 
@@ -202,6 +206,8 @@ public final class CollectionViewChatLayout: UICollectionViewLayout {
     private var dontReturnAttributes: Bool = true
 
     private var currentPositionSnapshot: ChatLayoutPositionSnapshot?
+
+    private var applyingOffsetDelta: CGFloat?
 
     private let _flipsHorizontallyInOppositeLayoutDirection: Bool
 
@@ -299,6 +305,14 @@ public final class CollectionViewChatLayout: UICollectionViewLayout {
         collectionView.layoutIfNeeded()
         currentPositionSnapshot = nil
     }
+    
+    public func applyOffsetDelta(_ delta: CGFloat) {
+        applyingOffsetDelta = delta
+        let context = ChatLayoutInvalidationContext()
+        context.invalidateLayoutMetrics = false
+        invalidateLayout(with: context)
+        applyingOffsetDelta = nil
+    }
 
     // MARK: Providing Layout Attributes
 
@@ -310,12 +324,6 @@ public final class CollectionViewChatLayout: UICollectionViewLayout {
               !prepareActions.isEmpty else {
             return
         }
-
-        #if DEBUG
-        if collectionView.isPrefetchingEnabled {
-            preconditionFailure("UICollectionView with prefetching enabled is not supported due to https://openradar.appspot.com/40926834 bug.")
-        }
-        #endif
 
         if prepareActions.contains(.switchStates) {
             controller.commitUpdates()
@@ -651,10 +659,28 @@ public final class CollectionViewChatLayout: UICollectionViewLayout {
                     context.contentOffsetAdjustment.y = desiredOffset - collectionView.contentOffset.y
                 case .bottom:
                     let desiredOffset = max(min(maxAllowed, frame.maxY + currentPositionSnapshot.offset - collectionView.bounds.height + adjustedContentInset.bottom + settings.additionalInsets.bottom), -adjustedContentInset.top)
+                    /* Old logic
+                    let minAllowed = -collectionView.adjustedContentInset.top
+                    let maxAllowed = max(-collectionView.adjustedContentInset.top, contentHeight - collectionView.frame.height + collectionView.adjustedContentInset.bottom)
+                    let newOffset = frame.maxY + currentPositionSnapshot.offset - collectionView.bounds.height + collectionView.adjustedContentInset.bottom + settings.additionalInsets.bottom
+                    let desiredOffset = max(min(maxAllowed, newOffset), minAllowed)
+                     */
                     context.contentOffsetAdjustment.y = desiredOffset - collectionView.contentOffset.y
                 }
             }
         }
+
+        if let applyingOffsetDelta = applyingOffsetDelta {
+            let contentHeight = controller.contentHeight(at: state)
+            if contentHeight != 0,
+               contentHeight > (visibleBounds.size.height + applyingOffsetDelta) {
+                let maxAllowed = max(-collectionView.adjustedContentInset.top, contentHeight - collectionView.frame.height + collectionView.adjustedContentInset.bottom)
+                let newOffset = collectionView.contentOffset.y + applyingOffsetDelta
+                let desiredOffset = min(maxAllowed, newOffset)
+                context.contentOffsetAdjustment.y = desiredOffset - collectionView.contentOffset.y
+            }
+        }
+
         super.invalidateLayout(with: context)
     }
 
@@ -984,18 +1010,18 @@ extension CollectionViewChatLayout {
 
 extension CollectionViewChatLayout: ChatLayoutRepresentation {
 
-    func numberOfItems(in section: Int) -> Int {
+    public func numberOfItems(in section: Int) -> Int {
         guard let collectionView else {
             return .zero
         }
         return collectionView.numberOfItems(inSection: section)
     }
 
-    func shouldPresentHeader(at sectionIndex: Int) -> Bool {
+    public func shouldPresentHeader(at sectionIndex: Int) -> Bool {
         delegate?.shouldPresentHeader(self, at: sectionIndex) ?? false
     }
 
-    func shouldPresentFooter(at sectionIndex: Int) -> Bool {
+    public func shouldPresentFooter(at sectionIndex: Int) -> Bool {
         delegate?.shouldPresentFooter(self, at: sectionIndex) ?? false
     }
 
