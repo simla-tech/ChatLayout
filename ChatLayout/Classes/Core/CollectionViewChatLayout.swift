@@ -169,6 +169,10 @@ open class CollectionViewChatLayout: UICollectionViewLayout {
         }
         return collectionView.frame.size
     }
+    
+    public var contentHeight: CGFloat {
+        controller.contentHeight(at: state)
+    }
 
     // MARK: Private Properties
 
@@ -210,6 +214,8 @@ open class CollectionViewChatLayout: UICollectionViewLayout {
     private var dontReturnAttributes: Bool = true
 
     private var currentPositionSnapshot: ChatLayoutPositionSnapshot?
+
+    private var applyingOffsetDelta: CGFloat?
 
     private let _flipsHorizontallyInOppositeLayoutDirection: Bool
 
@@ -316,6 +322,14 @@ open class CollectionViewChatLayout: UICollectionViewLayout {
         collectionView.setNeedsLayout()
         collectionView.layoutIfNeeded()
         currentPositionSnapshot = nil
+    }
+    
+    public func applyOffsetDelta(_ delta: CGFloat) {
+        applyingOffsetDelta = delta
+        let context = ChatLayoutInvalidationContext()
+        context.invalidateLayoutMetrics = false
+        invalidateLayout(with: context)
+        applyingOffsetDelta = nil
     }
 
     /// If you want to use new `UICollectionView.reconfigureItems(..)` api and expect the reconfiguration to happen animated as well
@@ -680,6 +694,18 @@ open class CollectionViewChatLayout: UICollectionViewLayout {
                 }
             }
         }
+
+        if let applyingOffsetDelta = applyingOffsetDelta {
+            let contentHeight = controller.contentHeight(at: state)
+            if contentHeight != 0,
+               contentHeight > (visibleBounds.size.height + applyingOffsetDelta) {
+                let maxAllowed = max(-collectionView.adjustedContentInset.top, contentHeight - collectionView.frame.height + collectionView.adjustedContentInset.bottom)
+                let newOffset = collectionView.contentOffset.y + applyingOffsetDelta
+                let desiredOffset = min(maxAllowed, newOffset)
+                context.contentOffsetAdjustment.y = desiredOffset - collectionView.contentOffset.y
+            }
+        }
+
         super.invalidateLayout(with: context)
     }
 
@@ -1032,18 +1058,19 @@ extension CollectionViewChatLayout {
 }
 
 extension CollectionViewChatLayout: ChatLayoutRepresentation {
-    func numberOfItems(in section: Int) -> Int {
+
+    public func numberOfItems(in section: Int) -> Int {
         guard let collectionView else {
             return .zero
         }
         return collectionView.numberOfItems(inSection: section)
     }
 
-    func shouldPresentHeader(at sectionIndex: Int) -> Bool {
+    public func shouldPresentHeader(at sectionIndex: Int) -> Bool {
         delegate?.shouldPresentHeader(self, at: sectionIndex) ?? false
     }
 
-    func shouldPresentFooter(at sectionIndex: Int) -> Bool {
+    public func shouldPresentFooter(at sectionIndex: Int) -> Bool {
         delegate?.shouldPresentFooter(self, at: sectionIndex) ?? false
     }
 
