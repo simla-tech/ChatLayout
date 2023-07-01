@@ -7,7 +7,7 @@ let project = Project(
         Target(
             name: .ChatLayout,
             sources: "ChatLayout/Classes/Core/**",
-            lintConfigPath: nil,
+            enableCodeLinting: false,
             dependencies: [
                 .target(name: .Core)
             ]
