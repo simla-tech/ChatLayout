@@ -4,7 +4,7 @@ import ProjectDescriptionHelpers
 let project = Project(
     name: .ChatLayout,
     targets: [
-        Target(
+        .target(
             name: .ChatLayout,
             sources: "ChatLayout/Classes/Core/**",
             enableCodeLinting: false,
