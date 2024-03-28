@@ -32,6 +32,7 @@ public protocol ChatLayoutDelegate: AnyObject {
     ///   - chatLayout: `CollectionViewChatLayout` reference.
     ///   - sectionIndex: Index of the section.
     /// - Returns: `Bool`.
+    // periphery:ignore:parameters chatLayout - delegate best practice
     func shouldPresentHeader(_ chatLayout: CollectionViewChatLayout,
                              at sectionIndex: Int) -> Bool
 
@@ -40,6 +41,7 @@ public protocol ChatLayoutDelegate: AnyObject {
     ///   - chatLayout: `CollectionViewChatLayout` reference.
     ///   - sectionIndex: Index of the section.
     /// - Returns: `Bool`.
+    // periphery:ignore:parameters chatLayout - delegate best practice
     func shouldPresentFooter(_ chatLayout: CollectionViewChatLayout,
                              at sectionIndex: Int) -> Bool
 
